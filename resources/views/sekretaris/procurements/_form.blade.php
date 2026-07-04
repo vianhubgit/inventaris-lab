@@ -1,5 +1,35 @@
-@php($procurement = $procurement ?? null)
-@php($isNew = old('is_new_item', $procurement?->is_new_item ? '1' : '0'))
+@php
+    $procurement = $procurement ?? null;
+    $isNew = old('is_new_item', $procurement?->is_new_item ? '1' : '0');
+
+    // Lokasi barang terpilih (untuk preselect cascade saat edit).
+    $selItemId = old('item_id', $procurement?->item_id);
+    $selItem = $items->firstWhere('id', $selItemId);
+    $selLab = $selItem?->lab_id;
+    $selTable = $selItem?->lab_table_id;
+    $selGroup = null;
+    foreach ($labs as $__lab) {
+        foreach ($__lab->groups as $__g) {
+            if ($__g->tables->contains('id', $selTable)) { $selGroup = $__g->id; break 2; }
+        }
+    }
+
+    // Data cascade Lab > Kelompok > Meja > Barang untuk cascade.js.
+    $cascade = ['labs' => [], 'items' => []];
+    foreach ($labs as $__lab) {
+        $__groups = [];
+        foreach ($__lab->groups as $__g) {
+            $__groups[$__g->id] = [
+                'nama' => $__g->display_name,
+                'tables' => $__g->tables->map(fn ($t) => ['id' => $t->id, 'nama' => $t->display_name])->values(),
+            ];
+        }
+        $cascade['labs'][$__lab->id] = ['groups' => $__groups];
+    }
+    foreach ($items as $__it) {
+        $cascade['items'][] = ['id' => $__it->id, 'nama' => $__it->nama, 'lab_id' => $__it->lab_id, 'lab_table_id' => $__it->lab_table_id];
+    }
+@endphp
 
 <div class="space-y-4">
     <div>
@@ -20,33 +50,6 @@
 
     {{-- Barang sudah ada: dipilih lewat lokasi agar daftar barang tidak terlalu panjang --}}
     <div data-existing-item class="space-y-4">
-        @php
-            $selItemId = old('item_id', $procurement?->item_id);
-            $selItem = $items->firstWhere('id', $selItemId);
-            $selLab = $selItem?->lab_id;
-            $selTable = $selItem?->lab_table_id;
-            $selGroup = null;
-            foreach ($labs as $__lab) {
-                foreach ($__lab->groups as $__g) {
-                    if ($__g->tables->contains('id', $selTable)) { $selGroup = $__g->id; break 2; }
-                }
-            }
-            $cascade = ['labs' => [], 'items' => []];
-            foreach ($labs as $__lab) {
-                $__groups = [];
-                foreach ($__lab->groups as $__g) {
-                    $__groups[$__g->id] = [
-                        'nama' => $__g->display_name,
-                        'tables' => $__g->tables->map(fn ($t) => ['id' => $t->id, 'nama' => $t->display_name])->values(),
-                    ];
-                }
-                $cascade['labs'][$__lab->id] = ['groups' => $__groups];
-            }
-            foreach ($items as $__it) {
-                $cascade['items'][] = ['id' => $__it->id, 'nama' => $__it->nama, 'lab_id' => $__it->lab_id, 'lab_table_id' => $__it->lab_table_id];
-            }
-        @endphp
-
         <script type="application/json" data-cascade>@json($cascade)</script>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
