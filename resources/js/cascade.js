@@ -67,7 +67,19 @@ export function initCascade() {
 
     const refreshItems = (preserve) => {
         if (!itemSel) return;
-        const items = (data.items || []).filter((i) => String(i.lab_id) === String(labSel.value));
+        const lab = data.labs[labSel.value];
+        let items = (data.items || []).filter((i) => String(i.lab_id) === String(labSel.value));
+
+        const tid = tableSel?.value;
+        const gid = groupSel?.value;
+        if (tid) {
+            // Meja terpilih: hanya barang pada meja itu.
+            items = items.filter((i) => String(i.lab_table_id) === String(tid));
+        } else if (gid && lab && lab.groups[gid]) {
+            // Kelompok terpilih (belum pilih meja): barang pada meja-meja kelompok itu.
+            const tableIds = new Set((lab.groups[gid].tables || []).map((t) => String(t.id)));
+            items = items.filter((i) => tableIds.has(String(i.lab_table_id)));
+        }
         fill(itemSel, items, '— Pilih Barang —', preserve ? itemSel?.dataset.selected : '');
     };
 
@@ -76,7 +88,11 @@ export function initCascade() {
         refreshTables(false);
         refreshItems(false);
     });
-    groupSel?.addEventListener('change', () => refreshTables(false));
+    groupSel?.addEventListener('change', () => {
+        refreshTables(false);
+        refreshItems(false);
+    });
+    tableSel?.addEventListener('change', () => refreshItems(false));
 
     // Inisialisasi (mempertahankan nilai lama saat edit).
     if (labSel.value) {
