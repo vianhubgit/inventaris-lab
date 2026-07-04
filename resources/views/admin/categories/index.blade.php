@@ -19,6 +19,7 @@
     </div>
 
     <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
         <table class="table-default">
             <thead><tr><th>Nama Kategori</th><th>Deskripsi</th><th>Jumlah Barang</th><th class="text-right">Aksi</th></tr></thead>
             <tbody>
@@ -42,6 +43,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="mt-4">{{ $categories->links() }}</div>

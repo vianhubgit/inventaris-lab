@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sekretaris\StoreProcurementRequest;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Lab;
 use App\Models\Procurement;
 use App\Notifications\NewProcurementNotification;
 use App\Services\Notifier;
@@ -106,7 +107,8 @@ class ProcurementController extends Controller
     {
         return [
             'categories' => Category::orderBy('nama')->get(),
-            'items' => Item::orderBy('nama')->get(['id', 'nama', 'category_id']),
+            'labs' => Lab::with('groups.tables')->orderBy('nama')->get(),
+            'items' => Item::orderBy('nama')->get(['id', 'nama', 'category_id', 'lab_id', 'lab_table_id']),
         ];
     }
 }

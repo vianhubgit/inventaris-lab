@@ -18,16 +18,67 @@
         </div>
     </div>
 
-    {{-- Barang sudah ada --}}
-    <div data-existing-item>
-        <label class="form-label">Pilih Barang</label>
-        <select name="item_id" class="form-select">
-            <option value="">— Pilih Barang —</option>
-            @foreach($items as $i)
-                <option value="{{ $i->id }}" @selected(old('item_id', $procurement?->item_id) == $i->id)>{{ $i->nama }}</option>
-            @endforeach
-        </select>
-        @error('item_id')<p class="form-error">{{ $message }}</p>@enderror
+    {{-- Barang sudah ada: dipilih lewat lokasi agar daftar barang tidak terlalu panjang --}}
+    <div data-existing-item class="space-y-4">
+        @php
+            $selItemId = old('item_id', $procurement?->item_id);
+            $selItem = $items->firstWhere('id', $selItemId);
+            $selLab = $selItem?->lab_id;
+            $selTable = $selItem?->lab_table_id;
+            $selGroup = null;
+            foreach ($labs as $__lab) {
+                foreach ($__lab->groups as $__g) {
+                    if ($__g->tables->contains('id', $selTable)) { $selGroup = $__g->id; break 2; }
+                }
+            }
+            $cascade = ['labs' => [], 'items' => []];
+            foreach ($labs as $__lab) {
+                $__groups = [];
+                foreach ($__lab->groups as $__g) {
+                    $__groups[$__g->id] = [
+                        'nama' => $__g->display_name,
+                        'tables' => $__g->tables->map(fn ($t) => ['id' => $t->id, 'nama' => $t->display_name])->values(),
+                    ];
+                }
+                $cascade['labs'][$__lab->id] = ['groups' => $__groups];
+            }
+            foreach ($items as $__it) {
+                $cascade['items'][] = ['id' => $__it->id, 'nama' => $__it->nama, 'lab_id' => $__it->lab_id, 'lab_table_id' => $__it->lab_table_id];
+            }
+        @endphp
+
+        <script type="application/json" data-cascade>@json($cascade)</script>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+                <label class="form-label">Laboratorium</label>
+                <select data-cascade-lab class="form-select">
+                    <option value="">— Pilih Lab —</option>
+                    @foreach($labs as $l)
+                        <option value="{{ $l->id }}" @selected($selLab == $l->id)>{{ $l->nama }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Kelompok</label>
+                <select data-cascade-group data-selected="{{ $selGroup }}" class="form-select">
+                    <option value="">— Pilih Kelompok —</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Meja</label>
+                <select data-cascade-table data-selected="{{ $selTable }}" class="form-select">
+                    <option value="">— Pilih Meja —</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Barang <span class="text-red-500">*</span></label>
+                <select name="item_id" data-cascade-item data-selected="{{ $selItemId }}" class="form-select">
+                    <option value="">— Pilih Lab dulu —</option>
+                </select>
+                @error('item_id')<p class="form-error">{{ $message }}</p>@enderror
+            </div>
+        </div>
     </div>
 
     {{-- Barang baru --}}
