@@ -217,6 +217,12 @@ Buat symlink storage agar foto laporan tampil:
 --------------------------------------------------------------------------
 12. BUILD ASET FRONTEND
 --------------------------------------------------------------------------
+Bila server RAM kecil (<= 1 GB, mis. VM/instance mini), "npm run build" (Vite)
+bisa gagal karena kehabisan memori (pesan "Killed"/OOM). Buat swap 2 GB dulu:
+ $ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+ $ sudo mkswap /swapfile && sudo swapon /swapfile
+ $ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab   # agar permanen
+
  $ npm run build
 
 (Hasil build di public/build. Tidak perlu menjalankan "npm run dev" di server.)
