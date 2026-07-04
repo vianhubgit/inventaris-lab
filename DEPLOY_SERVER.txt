@@ -1,0 +1,407 @@
+==========================================================================
+ PANDUAN DEPLOY — APLIKASI INVENTARIS LABORATORIUM TKJ
+ Target: Ubuntu Server 24.04 LTS + Nginx + PHP-FPM 8.3 + MariaDB
+ Mode  : Jaringan Lokal Sekolah (LAN), bukan internet
+==========================================================================
+
+Ikuti langkah demi langkah. Perintah diawali "$" dijalankan sebagai user biasa
+(dengan sudo bila perlu). Asumsi nama domain/host lokal: inventaris.lab (atau
+cukup pakai IP server, mis. http://192.168.1.10).
+
+
+--------------------------------------------------------------------------
+ 0. RINGKASAN ALUR
+--------------------------------------------------------------------------
+ 1) Install Ubuntu Server
+ 2) Update sistem & install paket dasar
+ 3) Install PHP 8.3 + ekstensi
+ 4) Install Composer
+ 5) Install Nginx
+ 6) Install MariaDB + buat database & user
+ 7) Install Git (opsional, untuk clone)
+ 8) Salin / clone project
+ 9) Konfigurasi .env
+10) Generate APP_KEY
+11) Migrasi + Seeder
+12) Build aset frontend (Vite)
+13) Set permission storage & cache
+14) Konfigurasi Nginx (server block)
+15) Restart service
+16) Firewall (UFW)
+17) Testing
+18) Backup database (manual + otomatis)
+19) Update project (bisa otomatis via ./deploy.sh)
+20) Maintenance
+21) Optimasi OPcache (opsional)
+22) Checklist keamanan & pra-go-live
+
+ Catatan: langkah 10-12 & cache production bisa dijalankan sekaligus dengan
+ skrip  ./deploy.sh  (lihat langkah 19) setelah .env & database siap.
+
+
+--------------------------------------------------------------------------
+ 1. INSTALL UBUNTU SERVER 24.04 LTS
+--------------------------------------------------------------------------
+- Install Ubuntu Server 24.04 LTS dari ISO resmi.
+- Saat instalasi: buat user admin (mis. "labadmin"), aktifkan OpenSSH server.
+- Pastikan server mendapat IP statis di jaringan lab. Contoh netplan:
+
+  $ sudo nano /etc/netplan/01-netcfg.yaml
+
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: no
+        addresses: [192.168.1.10/24]
+        routes:
+          - to: default
+            via: 192.168.1.1
+        nameservers:
+          addresses: [192.168.1.1, 8.8.8.8]
+
+  $ sudo netplan apply
+
+
+--------------------------------------------------------------------------
+ 2. UPDATE SISTEM & PAKET DASAR
+--------------------------------------------------------------------------
+ $ sudo apt update && sudo apt upgrade -y
+ $ sudo apt install -y software-properties-common curl unzip git ufw
+
+
+--------------------------------------------------------------------------
+ 3. INSTALL PHP 8.3 + EKSTENSI
+--------------------------------------------------------------------------
+Ubuntu 24.04 sudah menyediakan PHP 8.3. Bila perlu PPA ondrej:
+
+ $ sudo add-apt-repository ppa:ondrej/php -y
+ $ sudo apt update
+
+Install PHP-FPM dan ekstensi yang dibutuhkan Laravel + Excel/PDF:
+
+ $ sudo apt install -y php8.3-fpm php8.3-cli php8.3-common \
+     php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl \
+     php8.3-zip php8.3-gd php8.3-bcmath php8.3-intl php8.3-readline
+
+Cek versi:
+ $ php -v
+
+Sesuaikan php.ini (FPM) untuk upload foto laporan:
+ $ sudo nano /etc/php/8.3/fpm/php.ini
+   upload_max_filesize = 8M
+   post_max_size = 16M
+   memory_limit = 256M
+ $ sudo systemctl restart php8.3-fpm
+
+
+--------------------------------------------------------------------------
+ 4. INSTALL COMPOSER
+--------------------------------------------------------------------------
+ $ cd ~
+ $ curl -sS https://getcomposer.org/installer | php
+ $ sudo mv composer.phar /usr/local/bin/composer
+ $ composer --version
+
+
+--------------------------------------------------------------------------
+ 5. INSTALL NGINX
+--------------------------------------------------------------------------
+ $ sudo apt install -y nginx
+ $ sudo systemctl enable --now nginx
+
+
+--------------------------------------------------------------------------
+ 6. INSTALL MARIADB + DATABASE
+--------------------------------------------------------------------------
+ $ sudo apt install -y mariadb-server
+ $ sudo systemctl enable --now mariadb
+ $ sudo mysql_secure_installation     # set root password, hapus anon user, dll.
+
+Buat database & user aplikasi:
+ $ sudo mysql -u root -p
+
+   CREATE DATABASE inventaris_lab CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   CREATE USER 'inventaris'@'localhost' IDENTIFIED BY 'GANTI_PASSWORD_KUAT';
+   GRANT ALL PRIVILEGES ON inventaris_lab.* TO 'inventaris'@'localhost';
+   FLUSH PRIVILEGES;
+   EXIT;
+
+
+--------------------------------------------------------------------------
+ 7. INSTALL NODE.JS (untuk build aset Vite/Tailwind)
+--------------------------------------------------------------------------
+ $ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+ $ sudo apt install -y nodejs
+ $ node -v && npm -v
+
+
+--------------------------------------------------------------------------
+ 8. SALIN / CLONE PROJECT
+--------------------------------------------------------------------------
+Letakkan project di /var/www/inventaris-lab.
+
+Opsi A — salin folder (dari laptop via scp):
+ $ scp -r "project-lab" labadmin@192.168.1.10:/tmp/inventaris-lab
+ $ sudo mv /tmp/inventaris-lab /var/www/inventaris-lab
+
+Opsi B — clone dari Git:
+ $ sudo git clone <URL_REPO> /var/www/inventaris-lab
+
+Masuk ke folder & install dependency:
+ $ cd /var/www/inventaris-lab
+ $ composer install --no-dev --optimize-autoloader
+ $ npm install
+
+
+--------------------------------------------------------------------------
+ 9. KONFIGURASI .env
+--------------------------------------------------------------------------
+Gunakan template khusus production (sudah APP_ENV=production, APP_DEBUG=false,
+LOG_LEVEL=warning). PENTING: bila project disalin dari laptop, HAPUS dulu file
+.env lama yang ikut terbawa agar tidak memakai konfigurasi 'local'.
+
+ $ rm -f .env
+ $ cp .env.production.example .env
+ $ nano .env
+
+Sesuaikan minimal:
+   APP_NAME="Inventaris Lab TKJ"
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=http://192.168.1.10        # atau http://inventaris.lab
+   APP_TIMEZONE=Asia/Jakarta
+
+   DB_CONNECTION=mysql                 # gunakan 'mariadb' bila ingin driver mariadb
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=inventaris_lab
+   DB_USERNAME=inventaris
+   DB_PASSWORD=GANTI_PASSWORD_KUAT
+
+(Bila server memakai HTTPS, set juga SESSION_SECURE_COOKIE=true.)
+
+
+--------------------------------------------------------------------------
+10. GENERATE APP KEY
+--------------------------------------------------------------------------
+ $ php artisan key:generate
+
+
+--------------------------------------------------------------------------
+11. MIGRASI + SEEDER
+--------------------------------------------------------------------------
+ $ php artisan migrate --force
+ $ php artisan db:seed --force
+
+Di mode production, seeder HANYA mengisi data inti (aman, tanpa data dummy):
+   - Akun admin & sekretaris
+   - Daftar kategori barang
+   - Struktur Lab A, Lab B (6 kelompok x 6 meja), dan TEFA beserta item standar
+Laporan/pengajuan contoh (DemoSeeder) TIDAK ikut ter-seed di production, jadi
+database awal tetap bersih. Semua seeder idempotent (aman diulang).
+
+(Bila sengaja ingin memuat data demo untuk uji coba di server:
+   $ SEED_DEMO=true php artisan db:seed --force )
+
+Membuat akun default:
+   admin       / admin123
+   sekretaris  / sekretaris123
+   >>> WAJIB ganti password setelah login pertama (menu Pengguna).
+
+Buat symlink storage agar foto laporan tampil:
+ $ php artisan storage:link
+
+
+--------------------------------------------------------------------------
+12. BUILD ASET FRONTEND
+--------------------------------------------------------------------------
+ $ npm run build
+
+(Hasil build di public/build. Tidak perlu menjalankan "npm run dev" di server.)
+
+Optimasi cache Laravel untuk produksi:
+ $ php artisan config:cache
+ $ php artisan route:cache
+ $ php artisan view:cache
+
+
+--------------------------------------------------------------------------
+13. PERMISSION STORAGE & CACHE
+--------------------------------------------------------------------------
+Nginx/PHP-FPM berjalan sebagai user www-data.
+
+ $ sudo chown -R www-data:www-data /var/www/inventaris-lab
+ $ sudo find /var/www/inventaris-lab -type f -exec chmod 644 {} \;
+ $ sudo find /var/www/inventaris-lab -type d -exec chmod 755 {} \;
+ $ sudo chmod -R 775 /var/www/inventaris-lab/storage
+ $ sudo chmod -R 775 /var/www/inventaris-lab/bootstrap/cache
+
+
+--------------------------------------------------------------------------
+14. KONFIGURASI NGINX (SERVER BLOCK)
+--------------------------------------------------------------------------
+ $ sudo nano /etc/nginx/sites-available/inventaris-lab
+
+------------------------------------------------------------------
+server {
+    listen 80;
+    server_name 192.168.1.10 inventaris.lab;
+    root /var/www/inventaris-lab/public;
+
+    index index.php;
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    client_max_body_size 16M;
+}
+------------------------------------------------------------------
+
+Aktifkan & uji konfigurasi:
+ $ sudo ln -s /etc/nginx/sites-available/inventaris-lab /etc/nginx/sites-enabled/
+ $ sudo rm -f /etc/nginx/sites-enabled/default
+ $ sudo nginx -t
+
+
+--------------------------------------------------------------------------
+15. RESTART SERVICE
+--------------------------------------------------------------------------
+ $ sudo systemctl restart php8.3-fpm
+ $ sudo systemctl restart nginx
+
+
+--------------------------------------------------------------------------
+16. FIREWALL (UFW)
+--------------------------------------------------------------------------
+ $ sudo ufw allow OpenSSH
+ $ sudo ufw allow 'Nginx HTTP'
+ $ sudo ufw enable
+ $ sudo ufw status
+
+(Karena LAN, HTTPS opsional. Bila ingin HTTPS internal, gunakan self-signed
+ cert lalu tambahkan 'Nginx HTTPS' pada UFW.)
+
+
+--------------------------------------------------------------------------
+17. TESTING
+--------------------------------------------------------------------------
+- Dari komputer lain di jaringan lab, buka: http://192.168.1.10
+- Login sebagai admin (admin/admin123) → cek dashboard, CRUD barang, export.
+- Login sebagai sekretaris (sekretaris/sekretaris123) → buat laporan & pengajuan.
+- Pastikan upload foto laporan tampil (storage:link sudah dijalankan).
+
+Cek log bila error:
+ $ tail -f /var/www/inventaris-lab/storage/logs/laravel.log
+ $ sudo tail -f /var/log/nginx/error.log
+
+
+--------------------------------------------------------------------------
+18. BACKUP DATABASE
+--------------------------------------------------------------------------
+A) Manual:
+   $ mysqldump -u inventaris -p inventaris_lab > ~/backup-$(date +%F).sql
+
+B) Memakai command bawaan aplikasi (hasil di storage/app/backups):
+   $ cd /var/www/inventaris-lab
+   $ php artisan inventaris:backup
+
+C) Otomatis harian via cron Laravel scheduler:
+   $ sudo crontab -u www-data -e
+   Tambahkan baris:
+     * * * * * cd /var/www/inventaris-lab && php artisan schedule:run >> /dev/null 2>&1
+   (Scheduler sudah dijadwalkan menjalankan inventaris:backup setiap pukul 23:00.)
+
+Restore database:
+   $ mysql -u inventaris -p inventaris_lab < ~/backup-2026-01-01.sql
+
+
+--------------------------------------------------------------------------
+19. UPDATE PROJECT
+--------------------------------------------------------------------------
+CARA CEPAT (disarankan) — pakai skrip bawaan yang sudah mencakup maintenance
+mode, composer, build aset, migrate, dan rebuild cache:
+
+ $ cd /var/www/inventaris-lab
+ $ git pull                                 # atau salin file baru
+ $ ./deploy.sh                              # tambah --no-build bila aset tak berubah
+ $ sudo chown -R www-data:www-data storage bootstrap/cache
+
+CARA MANUAL (bila tidak memakai skrip):
+ $ cd /var/www/inventaris-lab
+ $ php artisan down                         # mode maintenance
+ $ git pull                                 # atau salin file baru
+ $ composer install --no-dev --optimize-autoloader
+ $ npm ci && npm run build
+ $ php artisan migrate --force
+ $ php artisan optimize:clear
+ $ php artisan config:cache
+ $ php artisan route:cache
+ $ php artisan view:cache
+ $ sudo chown -R www-data:www-data storage bootstrap/cache
+ $ php artisan up                           # keluar dari maintenance
+
+CATATAN: deploy.sh juga bisa dipakai untuk DEPLOY PERTAMA (setelah .env,
+database, dan Node.js siap) — ia otomatis generate APP_KEY bila belum ada,
+menjalankan migrate, storage:link, build aset, dan cache production.
+
+
+--------------------------------------------------------------------------
+20. MAINTENANCE
+--------------------------------------------------------------------------
+- Aktifkan maintenance:   $ php artisan down --secret="kunci-rahasia"
+  (akses tetap bisa via http://IP/<kunci-rahasia> untuk admin)
+- Nonaktifkan:            $ php artisan up
+- Bersihkan cache:        $ php artisan optimize:clear
+- Cek service:            $ sudo systemctl status nginx php8.3-fpm mariadb
+- Rotasi log Laravel sudah harian (config/logging.php channel "daily" tersedia).
+
+
+--------------------------------------------------------------------------
+21. OPTIMASI OPCACHE (opsional, disarankan untuk production)
+--------------------------------------------------------------------------
+Aktifkan OPcache agar PHP lebih cepat:
+ $ sudo nano /etc/php/8.3/fpm/php.ini
+   opcache.enable=1
+   opcache.memory_consumption=128
+   opcache.max_accelerated_files=10000
+   opcache.validate_timestamps=1     # set 0 utk performa maksimal (perlu reload FPM tiap update)
+ $ sudo systemctl restart php8.3-fpm
+
+
+--------------------------------------------------------------------------
+22. CHECKLIST KEAMANAN & PRA-GO-LIVE
+--------------------------------------------------------------------------
+[ ] APP_ENV=production dan APP_DEBUG=false di .env
+[ ] APP_KEY sudah di-generate (base64:...)
+[ ] Password default admin/sekretaris SUDAH diganti setelah login pertama
+[ ] Password database kuat (bukan kosong)
+[ ] File .env tidak bisa diakses dari web (root Nginx = folder public/) — sudah aman
+[ ] storage/ & bootstrap/cache/ writable oleh www-data (permission 775)
+[ ] Firewall UFW aktif, hanya SSH + HTTP (LAN) yang dibuka
+[ ] Backup harian berjalan (cek storage/app/backups setelah 1 hari)
+[ ] Health check http://<IP>/up mengembalikan 200 OK
+[ ] Ekstensi PHP lengkap: mbstring, xml/dom, gd, zip, bcmath, intl, mysql, curl
+    (gd & zip diperlukan untuk export Excel; dom/gd untuk export PDF)
+    Cek cepat:  $ php -m | grep -E 'gd|zip|dom|bcmath|intl|mbstring'
+
+==========================================================================
+ SELESAI. Aplikasi siap digunakan di jaringan lokal sekolah.
+==========================================================================
