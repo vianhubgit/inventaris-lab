@@ -25,7 +25,11 @@ class LabGroupController extends Controller
         $group = $lab->groups()->create($data);
         ActivityLogger::created($group, "Menambah {$group->display_name} di {$lab->nama}.");
 
-        return back()->with('success', 'Kelompok berhasil ditambahkan.');
+        $message = $lab->kode == 'TEFA'
+    ? 'Lemari berhasil ditambahkan.'
+    : 'Kelompok berhasil ditambahkan.';
+
+        return back()->with('success',$message);
     }
 
     public function update(Request $request, Lab $lab, LabGroup $group): RedirectResponse
@@ -43,7 +47,11 @@ class LabGroupController extends Controller
         $group->update($data);
         ActivityLogger::updated($group, "Mengubah kelompok di {$lab->nama}.");
 
-        return back()->with('success', 'Kelompok berhasil diperbarui.');
+        $message = $lab->kode == 'TEFA'
+    ? 'Lemari berhasil diperbarui.'
+    : 'Kelompok berhasil diperbarui.';
+
+        return back()->with('success',$message);
     }
 
     public function destroy(Lab $lab, LabGroup $group): RedirectResponse
@@ -53,6 +61,10 @@ class LabGroupController extends Controller
         $group->delete();
         ActivityLogger::log('deleted', "Menghapus kelompok di {$lab->nama}.");
 
-        return back()->with('success', 'Kelompok berhasil dihapus.');
+        $message = $lab->kode == 'TEFA'
+    ? 'Lemari berhasil dihapus.'
+    : 'Kelompok berhasil dihapus.';
+
+        return back()->with('success',$message);
     }
 }

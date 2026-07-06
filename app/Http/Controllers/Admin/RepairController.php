@@ -39,7 +39,10 @@ class RepairController extends Controller
             : null;
 
         return view('admin.repairs.create', [
-            'items' => Item::orderBy('nama')->get(),
+'items' => Item::select('id', 'nama')
+    ->groupBy('nama', 'id')
+    ->orderBy('nama')
+    ->get(),
             'statuses' => RepairStatus::options(),
             'report' => $report,
         ]);
@@ -78,7 +81,10 @@ class RepairController extends Controller
     {
         return view('admin.repairs.edit', [
             'repair' => $repair,
-            'items' => Item::orderBy('nama')->get(),
+'items' => Item::select('id', 'nama')
+    ->groupBy('nama', 'id')
+    ->orderBy('nama')
+    ->get(),
             'statuses' => RepairStatus::options(),
         ]);
     }

@@ -16,11 +16,18 @@
         <label class="form-label">Keterangan</label>
         <input type="text" name="keterangan" value="{{ old('keterangan', $lab?->keterangan) }}" class="form-input">
     </div>
-    <label class="flex items-center gap-2">
-        <input type="checkbox" name="has_groups" value="1" @checked(old('has_groups', $lab?->has_groups ?? true))
-               class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
-        <span class="text-sm">Memiliki kelompok & meja (nonaktifkan untuk TEFA / inventaris umum)</span>
-    </label>
+<label class="flex items-center gap-2">
+    <input
+        type="checkbox"
+        name="has_groups"
+        value="1"
+        @checked(old('has_groups', $lab?->has_groups ?? true))
+        class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+
+    <span class="text-sm">
+        Memiliki tata letak (Kelompok atau Lemari).
+    </span>
+</label>
 </div>
 
 <div class="mt-6 flex gap-3">

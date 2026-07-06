@@ -3,22 +3,21 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Database\Seeders\CategorySeeder;
+use Database\Seeders\DemoSeeder;
+use Database\Seeders\LabLayoutSeeder;
+use Database\Seeders\RoleUserSeeder;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Data inti yang selalu diperlukan (aman dijalankan di production).
-        // Semua idempotent (updateOrCreate) sehingga aman diulang.
         $this->call([
-            RoleUserSeeder::class,   // akun admin & sekretaris
-            CategorySeeder::class,   // kategori barang
-            LabLayoutSeeder::class,  // struktur Lab A, Lab B, TEFA + item standar
+            RoleUserSeeder::class,
+            CategorySeeder::class,
+            LabLayoutSeeder::class,
         ]);
 
-        // Data demo (laporan & pengajuan dummy) HANYA untuk pengembangan/pengujian.
-        // Tidak ikut ter-seed di production agar database awal tetap bersih.
-        // Paksa dengan: SEED_DEMO=true php artisan db:seed
         if (! app()->environment('production') || env('SEED_DEMO', false)) {
             $this->call(DemoSeeder::class);
         }

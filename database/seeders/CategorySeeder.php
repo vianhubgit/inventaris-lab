@@ -14,9 +14,13 @@ class CategorySeeder extends Seeder
             'Router', 'Access Point', 'Kabel LAN', 'RJ45', 'Tang Crimping',
             'LAN Tester', 'Proyektor', 'UPS', 'Speaker', 'MikroTik', 'Rak Server',
         ];
+       	  foreach ($categories as $nama) {
+               Category::updateOrCreate(
+                           ['nama' => $nama],
+                           ['nama' => $nama]
+                      );
+               	}
 
-        foreach ($categories as $nama) {
-            Category::updateOrCreate(['nama' => $nama]);
-        }
+
     }
 }
