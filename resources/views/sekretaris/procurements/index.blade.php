@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Status Pengajuan')
-@section('page-title', 'Status Pengajuan Saya')
+@section('title', 'Status Pinjaman')
+@section('page-title', 'Status Pinjaman Saya')
 
 @section('actions')
     <a href="{{ route('sekretaris.procurements.create') }}" class="btn-primary">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Ajukan Barang
+        Ajukan Peminjaman
     </a>
 @endsection
 
@@ -29,7 +29,7 @@
                                     <a href="{{ route('sekretaris.procurements.show', $p) }}" class="btn-secondary px-3 py-1.5 text-xs">Detail</a>
                                     @can('update', $p)
                                         <a href="{{ route('sekretaris.procurements.edit', $p) }}" class="btn-secondary px-3 py-1.5 text-xs">Edit</a>
-                                        <form method="POST" action="{{ route('sekretaris.procurements.destroy', $p) }}" data-confirm="Batalkan pengajuan ini?">
+                                        <form method="POST" action="{{ route('sekretaris.procurements.destroy', $p) }}" data-confirm="Batalkan pinjaman ini?">
                                             @csrf @method('DELETE')
                                             <button class="btn-danger px-3 py-1.5 text-xs">Batal</button>
                                         </form>

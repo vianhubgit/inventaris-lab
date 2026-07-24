@@ -85,7 +85,7 @@ class ItemController extends Controller
     {
         $this->authorize('delete', $item);
 
-        $item->delete();
+        $item->forcedelete();
 
         return redirect()->route('admin.items.index')
             ->with('success', 'Barang berhasil dihapus.');

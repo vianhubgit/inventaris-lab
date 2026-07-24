@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon1.png') }}">
 
     {{-- Cegah flash dark mode sebelum JS termuat --}}
     <script>
@@ -29,9 +32,9 @@
         <aside data-sidebar
                class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform overflow-y-auto border-r border-gray-200 bg-white transition-transform duration-200 dark:border-gray-700 dark:bg-gray-800 lg:translate-x-0">
             <div class="flex h-16 items-center gap-2 border-b border-gray-200 px-5 dark:border-gray-700">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 font-bold text-white">IL</span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 font-bold text-white">IT</span>
                 <div class="leading-tight">
-                    <p class="text-sm font-bold">Inventaris Lab</p>
+                    <p class="text-sm font-bold">Inventaris</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">TKJ</p>
                 </div>
             </div>

@@ -2,32 +2,19 @@
 
 @section('title', 'Peminjaman')
 @section('page-title', 'Pinjaman Barang')
-@section('actions')
 
-<a href="{{ route('admin.export.procurements.excel', request()->query()) }}"
-   class="btn-success px-3 py-2 text-sm">
-    Excel
-</a>
-
-<a href="{{ route('admin.export.procurements.pdf', request()->query()) }}"
-   class="btn-danger px-3 py-2 text-sm">
-    PDF
-</a>
-
-@endsection
 @section('content')
-
-    <div class="card mb-4 p-4">
-        <form method="GET" class="flex gap-3" data-no-loader>
-            <select name="status" class="form-select max-w-xs">
-                <option value="">Semua Status</option>
-                @foreach($statuses as $value => $label)
-                    <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-            <button class="btn-secondary">Filter</button>
-        </form>
-    </div>
+  <div class="card mb-4 p-4">
+	<form method="GET" class="flex gap-3" data-no-loader>
+	<select name="status" class="form-select max-w-xs">
+	<option value="">Semua Status</option>
+	@foreach($statuses as $value => $label)
+	<option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+	@endforeach
+	</select>
+	<button class="btn-secondary">Filter</button>
+	</form>
+	</div>
 
     <div class="card overflow-hidden">
         <div class="overflow-x-auto">

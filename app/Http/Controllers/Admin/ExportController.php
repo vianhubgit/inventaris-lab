@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
+use App\Exports\ProcurementsExport;
+use App\Models\Procurement;
 
 class ExportController extends Controller
 {
@@ -28,26 +30,221 @@ class ExportController extends Controller
         );
     }
 
-    public function itemsPdf(Request $request): Response
-    {
-        $items = Item::query()
-            ->with(['category', 'lab', 'labTable.group'])
-            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->category_id))
-            ->when($request->filled('lab_id'), fn ($q) => $q->where('lab_id', $request->lab_id))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->when($request->filled('q'), fn ($q) => $q->search($request->q))
-            ->orderBy('nama')
-            ->get();
+public function itemsPdf(Request $request): Response
+{
+    $items = Item::query()
+        ->with(['category', 'lab', 'labTable.group'])
+        ->when($request->filled('category_id'), fn($q) => $q->where('category_id', $request->category_id))
+        ->when($request->filled('lab_id'), fn($q) => $q->where('lab_id', $request->lab_id))
+        ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+        ->when($request->filled('q'), fn($q) => $q->search($request->q))
+        ->get();
 
-        ActivityLogger::log('export', 'Export inventaris ke PDF.');
+    $labOrder = [
+        'Lab A' => 1,
+        'Lab B' => 2,
+        'TEFA'  => 3,
+    ];
 
-        $pdf = Pdf::loadView('pdf.items', [
-            'items' => $items,
-            'tanggal' => now()->translatedFormat('d F Y H:i'),
-        ])->setPaper('a4', 'landscape');
+    $statusOrder = [
+        'baik'       => 1,
+        'rusak'      => 2,
+        'hilang'     => 3,
+        'perbaikan'  => 4,
+    ];
 
-        return $pdf->download('inventaris-'.now()->format('Ymd-His').'.pdf');
+    $items = $items
+        ->sort(function ($a, $b) use ($labOrder, $statusOrder) {
+
+            $labCompare =
+                ($labOrder[$a->lab->nama] ?? 99)
+                <=>
+                ($labOrder[$b->lab->nama] ?? 99);
+
+            if ($labCompare !== 0) {
+                return $labCompare;
+            }
+
+            $statusCompare =
+                ($statusOrder[$a->status->value] ?? 99)
+                <=>
+                ($statusOrder[$b->status->value] ?? 99);
+
+            if ($statusCompare !== 0) {
+                return $statusCompare;
+            }
+
+            return strcmp($a->nama, $b->nama);
+
+        })
+        ->values();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kelompokkan per Lab
+    |--------------------------------------------------------------------------
+    */
+
+    $labs = collect();
+
+    foreach ($items as $item) {
+
+        $labName = $item->lab->nama;
+
+        if (!isset($labs[$labName])) {
+
+            $labs[$labName] = collect();
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Barang Baik digabung
+        |--------------------------------------------------------------------------
+        */
+
+        if ($item->status->value === 'baik') {
+
+            $key = implode('|', [
+
+                $item->lab_id,
+                $item->category_id,
+                $item->nama,
+                'baik',
+
+            ]);
+
+            if (!isset($labs[$labName][$key])) {
+
+                $labs[$labName][$key] = (object)[
+
+                    'nama' => $item->nama,
+
+                    'kategori' => $item->category?->nama,
+
+                    'lokasi' => $item->lab->nama,
+
+                    'jumlah' => $item->jumlah_total,
+
+                    'status' => $item->status,
+
+                    'keterangan' => $item->keterangan,
+
+                ];
+
+            } else {
+
+                $labs[$labName][$key]->jumlah += $item->jumlah_total;
+
+            }
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Rusak / Hilang / Perbaikan
+        |--------------------------------------------------------------------------
+        */
+
+        else {
+
+            $labs[$labName]->push((object)[
+
+                'nama' => $item->nama,
+
+                'kategori' => $item->category?->nama,
+
+                'lokasi' => $item->lokasi_lengkap,
+
+                'jumlah' => $item->jumlah_total,
+
+                'status' => $item->status,
+
+                'keterangan' => $item->keterangan,
+
+            ]);
+
+        }
+
     }
+
+    ActivityLogger::log('export', 'Export inventaris ke PDF.');
+
+    $pdf = Pdf::loadView('pdf.items', [
+
+        'labs' => $labs,
+
+        'tanggal' => now()->translatedFormat('d F Y H:i'),
+
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download(
+        'inventaris-' . now()->format('Ymd-His') . '.pdf'
+    );
+}
+
+
+    /* ================= PINJAMAN BARANG =========================*/
+    public function procurementsExcel(Request $request): BinaryFileResponse
+    {
+       ActivityLogger::log('export', 'Export peminjaman ke Excel.');
+
+       return Excel::download(
+           new ProcurementsExport($request->only(['status'])),
+           'peminjaman-'.now()->format('Ymd-His').'.xlsx'
+       );
+    }
+
+public function procurementsPdf(Request $request): Response
+{
+    $rows = Procurement::query()
+        ->with(['user'])
+        ->when(
+            $request->filled('status'),
+            fn ($q) => $q->where('status', $request->status)
+        )
+        ->orderBy('requested_at')
+        ->get();
+
+    $groups = collect();
+
+    foreach ($rows as $row) {
+
+        $last = $groups->last();
+
+        if (
+            $last &&
+            $last['user_id'] == $row->user_id &&
+            $last['requested_at']->diffInMinutes($row->requested_at) <= 10
+        ) {
+
+            $last['items'][] = $row;
+
+            $groups->pop();
+            $groups->push($last);
+
+        } else {
+
+            $groups->push([
+                'requested_at' => $row->requested_at,
+                'user_id'      => $row->user_id,
+                'user'         => $row->user,
+                'items'        => [$row],
+            ]);
+        }
+    }
+
+    ActivityLogger::log('export', 'Export peminjaman ke PDF.');
+
+    $pdf = Pdf::loadView('pdf.procurements', [
+        'groups' => $groups,
+        'tanggal' => now()->translatedFormat('d F Y H:i'),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download(
+        'peminjaman-' . now()->format('Ymd-His') . '.pdf'
+    );
+}
 
     /* ===================== LAPORAN / REPORTS ===================== */
 

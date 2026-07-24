@@ -96,6 +96,8 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('export/items/pdf', [Admin\ExportController::class, 'itemsPdf'])->name('export.items.pdf');
         Route::get('export/reports/excel', [Admin\ExportController::class, 'reportsExcel'])->name('export.reports.excel');
         Route::get('export/reports/pdf', [Admin\ExportController::class, 'reportsPdf'])->name('export.reports.pdf');
+	Route::get('export/procurements/excel', [Admin\ExportController::class, 'procurementsExcel'])->name('export.procurements.excel');
+	Route::get('export/procurements/pdf', [Admin\ExportController::class, 'procurementsPdf'])->name('export.procurements.pdf');
     });
 
 /*

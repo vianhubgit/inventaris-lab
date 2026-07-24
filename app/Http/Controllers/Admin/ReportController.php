@@ -56,7 +56,7 @@ class ReportController extends Controller
 
     public function destroy(Report $report): RedirectResponse
     {
-        $report->delete();
+        $report->forcedelete();
 
         return redirect()->route('admin.reports.index')
             ->with('success', 'Laporan berhasil dihapus.');

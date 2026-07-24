@@ -66,7 +66,7 @@ class CategoryController extends Controller
             return back()->with('error', 'Kategori masih digunakan oleh barang dan tidak dapat dihapus.');
         }
 
-        $category->delete();
+        $category->forcedelete();
         ActivityLogger::deleted($category, "Menghapus kategori \"{$category->nama}\".");
 
         return redirect()->route('admin.categories.index')

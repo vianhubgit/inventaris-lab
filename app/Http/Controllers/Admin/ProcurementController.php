@@ -57,7 +57,7 @@ class ProcurementController extends Controller
 
     public function destroy(Procurement $procurement): RedirectResponse
     {
-        $procurement->delete();
+        $procurement->forcedelete();
 
         return redirect()->route('admin.procurements.index')
             ->with('success', 'Pengajuan berhasil dihapus.');

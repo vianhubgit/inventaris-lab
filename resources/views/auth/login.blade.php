@@ -13,8 +13,8 @@
 <body class="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-600 to-brand-900 p-4 antialiased dark:from-gray-900 dark:to-gray-800">
     <div class="w-full max-w-md">
         <div class="mb-6 text-center text-white">
-            <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold backdrop-blur">IL</div>
-            <h1 class="text-2xl font-bold">Inventaris Laboratorium TKJ</h1>
+            <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold backdrop-blur">IT</div>
+            <h1 class="text-2xl font-bold">SARANA & PRASARANA TKJ</h1>
             <p class="text-sm text-white/80">Lab A &bull; Lab B &bull; TEFA</p>
         </div>
 
@@ -54,7 +54,7 @@
         </div>
 
         <p class="mt-6 text-center text-xs text-white/70">
-            &copy; {{ date('Y') }} Inventaris Lab TKJ. Berjalan di jaringan lokal sekolah.
+            &copy; {{ date('Y') }} Teknisi TKJ.V 0.21
         </p>
     </div>
 </body>

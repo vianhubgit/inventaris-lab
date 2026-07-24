@@ -56,7 +56,7 @@
     </div>
 
     <div>
-        <label class="form-label">Meja (opsional)</label>
+        <label class="form-label">Unit (opsional)</label>
         <select name="lab_table_id" data-cascade-table data-selected="{{ old('lab_table_id', $item?->lab_table_id) }}" class="form-select">
             <option value="">— Tanpa Meja —</option>
         </select>

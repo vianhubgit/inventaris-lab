@@ -40,6 +40,11 @@
                        class="border-gray-300 text-brand-600 focus:ring-brand-500">
                 <span class="text-sm">Barang sudah ada</span>
             </label>
+            <label class="flex items-center gap-2">
+                <input type="radio" name="is_new_item" value="1" @checked($isNew === '1' || $isNew === 1)
+                       class="border-gray-300 text-brand-600 focus:ring-brand-500">
+                <span class="text-sm">Barang baru</span>
+            </label>
         </div>
     </div>
 
@@ -49,30 +54,30 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-                <label class="form-label">Lokasi</label>
+                <label class="form-label">Laboratorium</label>
                 <select data-cascade-lab class="form-select">
-                    <option value="">— Pilih Lokasi —</option>
+                    <option value="">— Pilih Lab —</option>
                     @foreach($labs as $l)
                         <option value="{{ $l->id }}" @selected($selLab == $l->id)>{{ $l->nama }}</option>
                     @endforeach
                 </select>
             </div>
             <div>
-		<label class="form-label">Unit</label>
+                <label class="form-label">Lemari</label>
                 <select data-cascade-group data-selected="{{ $selGroup }}" class="form-select">
-                    <option value="">— Pilih Unit —</option>
+                    <option value="">— Pilih Lemari —</option>
                 </select>
             </div>
             <div>
-                <label class="form-label">Posisi</label>
+                <label class="form-label">Rak</label>
                 <select data-cascade-table data-selected="{{ $selTable }}" class="form-select">
-                    <option value="">— Pilih Posisi —</option>
+                    <option value="">— Pilih Rak —</option>
                 </select>
             </div>
             <div>
                 <label class="form-label">Barang <span class="text-red-500">*</span></label>
                 <select name="item_id" data-cascade-item data-selected="{{ $selItemId }}" class="form-select">
-                    <option value="">— Tentukan Lokasi —</option>
+                    <option value="">— Pilih Lab dulu —</option>
                 </select>
                 @error('item_id')<p class="form-error">{{ $message }}</p>@enderror
             </div>

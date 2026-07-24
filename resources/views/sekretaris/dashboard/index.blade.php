@@ -38,7 +38,7 @@
             <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg>
             </span>
-            <div><p class="font-semibold">Ajukan Barang</p><p class="text-xs text-gray-500">Pengajuan penambahan</p></div>
+            <div><p class="font-semibold">Pinjam Barang</p><p class="text-xs text-gray-500">Pengajuan penambahan</p></div>
         </a>
     </div>
 

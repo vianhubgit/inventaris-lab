@@ -50,7 +50,7 @@
             <div class="card p-6">
                 <form method="POST" action="{{ route('admin.procurements.destroy', $procurement) }}" data-confirm="Hapus pengajuan ini?">
                     @csrf @method('DELETE')
-                    <button class="btn-danger w-full">Hapus Pengajuan</button>
+                    <button class="btn-danger w-full">Hapus Laporan</button>
                 </form>
             </div>
         </div>

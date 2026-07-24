@@ -15,7 +15,7 @@ enum ProcurementStatus: string
             self::MENUNGGU => 'Menunggu',
             self::DISETUJUI => 'Disetujui',
             self::DITOLAK => 'Ditolak',
-            self::SUDAH_DIBELI => 'Sudah Dibeli',
+            self::SUDAH_DIBELI => 'Sudah Dikembalikan',
         };
     }
 

@@ -109,7 +109,7 @@ class ReportController extends Controller
         if ($report->foto) {
             Storage::disk('public')->delete($report->foto);
         }
-        $report->delete();
+        $report->forcedelete();
 
         return redirect()->route('sekretaris.reports.index')
             ->with('success', 'Laporan berhasil dihapus.');
